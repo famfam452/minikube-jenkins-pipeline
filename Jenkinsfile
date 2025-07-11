@@ -1,12 +1,35 @@
 /*
  * Jenkins Declarative Pipeline to deploy PostgreSQL to Kubernetes.
  *
- * This pipeline assumes it is running inside the same Kubernetes cluster
- * it is deploying to, and that the Jenkins agent has `kubectl` available
- * and the necessary RBAC permissions to deploy resources.
+ * This pipeline runs on a dynamically provisioned Kubernetes pod agent
+ * that has `kubectl` installed. This ensures the necessary tools are
+ * available to interact with the cluster.
  */
 pipeline {
-    agent any
+    // Define a Kubernetes pod as the agent for this pipeline.
+    agent {
+        kubernetes {
+            // This YAML defines the pod that will run our pipeline steps.
+            // It includes a container named 'kubectl' with the necessary tools.
+            // The pod runs in the 'default' namespace and uses the 'default'
+            // service account, which must be granted permissions via the RBAC file.
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: default
+spec:
+  containers:
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command:
+    - sleep
+    - 99d
+    tty: true
+  serviceAccountName: default
+'''
+        }
+    }
 
     stages {
         stage('Checkout Code') {
